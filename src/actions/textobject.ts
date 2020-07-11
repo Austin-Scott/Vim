@@ -696,6 +696,7 @@ abstract class SeekBlock extends TextObjectMovement {
     const failure = { start: position, stop: position, failed: true };
 
     let start = position;
+
     if (this.seekNext) {
       while (!this.seekBeginCharacters.includes(TextEditor.getCharAt(start))) {
         if (start.isAtDocumentEnd()) {
@@ -703,31 +704,71 @@ abstract class SeekBlock extends TextObjectMovement {
         }
         start = start.getRightThroughLineBreaks(true);
       }
-      if (!this.selectAround) {
-        start = start.getRightThroughLineBreaks(true);
+    } else {
+      while (!this.seekEndCharacters.includes(TextEditor.getCharAt(start))) {
+        if (start.isAtDocumentBegin()) {
+          return failure;
+        }
+        start = start.getLeftThroughLineBreaks(true);
       }
     }
 
     let stop = start;
+    let innerNest = 0;
 
     if (this.seekNext) {
-      while (!this.seekEndCharacters.includes(TextEditor.getCharAt(stop))) {
+      stop = stop.getRightThroughLineBreaks(true);
+      while (innerNest !== 0 || !this.seekEndCharacters.includes(TextEditor.getCharAt(stop))) {
         if (stop.isAtDocumentEnd()) {
           return failure;
         }
+        if (this.seekBeginCharacters.includes(TextEditor.getCharAt(stop))) {
+          innerNest++;
+        } else if (this.seekEndCharacters.includes(TextEditor.getCharAt(stop))) {
+          innerNest--;
+        }
+
         stop = stop.getRightThroughLineBreaks(true);
       }
       if (!this.selectAround) {
+        start = start.getRightThroughLineBreaks(true);
         stop = stop.getLeftThroughLineBreaks(true);
+      }
+    } else {
+      stop = stop.getLeftThroughLineBreaks(true);
+      while (innerNest !== 0 || !this.seekBeginCharacters.includes(TextEditor.getCharAt(stop))) {
+        if (stop.isAtDocumentBegin()) {
+          return failure;
+        }
+        if (this.seekEndCharacters.includes(TextEditor.getCharAt(stop))) {
+          innerNest++;
+        } else if (this.seekBeginCharacters.includes(TextEditor.getCharAt(stop))) {
+          innerNest--;
+        }
+
+        stop = stop.getLeftThroughLineBreaks(true);
+      }
+      if (!this.selectAround) {
+        start = start.getLeftThroughLineBreaks(true);
+        stop = stop.getRightThroughLineBreaks(true);
       }
     }
 
-    vimState.recordedState.operatorPositionDiff = start.subtract(position);
-    vimState.cursorStartPosition = start;
-    return {
-      start: start,
-      stop: stop,
-    };
+    if (this.seekNext) {
+      vimState.recordedState.operatorPositionDiff = start.subtract(position);
+      vimState.cursorStartPosition = start;
+      return {
+        start: start,
+        stop: stop,
+      };
+    } else {
+      vimState.recordedState.operatorPositionDiff = stop.subtract(position);
+      vimState.cursorStartPosition = stop;
+      return {
+        start: stop,
+        stop: start,
+      };
+    }
   }
 }
 
@@ -736,6 +777,63 @@ export class SeekInnerNextParenthesesOne extends SeekBlock {
   keys = ['i', 'n', '('];
   seekBeginCharacters = ['('];
   seekEndCharacters = [')'];
+}
+
+@RegisterAction
+export class SeekInnerNextParenthesesTwo extends SeekBlock {
+  keys = ['i', 'n', ')'];
+  seekBeginCharacters = ['('];
+  seekEndCharacters = [')'];
+}
+
+@RegisterAction
+export class SeekAroundNextParenthesesOne extends SeekBlock {
+  keys = ['a', 'n', '('];
+  seekBeginCharacters = ['('];
+  seekEndCharacters = [')'];
+  selectAround = true;
+}
+
+@RegisterAction
+export class SeekAroundNextParenthesesTwo extends SeekBlock {
+  keys = ['a', 'n', ')'];
+  seekBeginCharacters = ['('];
+  seekEndCharacters = [')'];
+  selectAround = true;
+}
+
+@RegisterAction
+export class SeekInnerLastParenthesesOne extends SeekBlock {
+  keys = ['i', 'l', '('];
+  seekBeginCharacters = ['('];
+  seekEndCharacters = [')'];
+  seekNext = false;
+}
+
+@RegisterAction
+export class SeekInnerLastParenthesesTwo extends SeekBlock {
+  keys = ['i', 'l', ')'];
+  seekBeginCharacters = ['('];
+  seekEndCharacters = [')'];
+  seekNext = false;
+}
+
+@RegisterAction
+export class SeekAroundLastParenthesesOne extends SeekBlock {
+  keys = ['a', 'l', '('];
+  seekBeginCharacters = ['('];
+  seekEndCharacters = [')'];
+  selectAround = true;
+  seekNext = false;
+}
+
+@RegisterAction
+export class SeekAroundLastParenthesesTwo extends SeekBlock {
+  keys = ['a', 'l', ')'];
+  seekBeginCharacters = ['('];
+  seekEndCharacters = [')'];
+  selectAround = true;
+  seekNext = false;
 }
 
 abstract class SelectArgument extends TextObjectMovement {
