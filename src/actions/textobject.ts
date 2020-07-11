@@ -684,6 +684,60 @@ class InsideIndentObjectBoth extends IndentObjectMatch {
   includeLineBelow = true;
 }
 
+abstract class SeekBlock extends TextObjectMovement {
+  modes = [Mode.Normal, Mode.Visual];
+
+  protected selectAround = false;
+  protected seekNext = true;
+  protected seekBeginCharacters: Array<string>;
+  protected seekEndCharacters: Array<string>;
+
+  public async execAction(position: Position, vimState: VimState): Promise<IMovement> {
+    const failure = { start: position, stop: position, failed: true };
+
+    let start = position;
+    if (this.seekNext) {
+      while (!this.seekBeginCharacters.includes(TextEditor.getCharAt(start))) {
+        if (start.isAtDocumentEnd()) {
+          return failure;
+        }
+        start = start.getRightThroughLineBreaks(true);
+      }
+      if (!this.selectAround) {
+        start = start.getRightThroughLineBreaks(true);
+      }
+    }
+
+    let stop = start;
+
+    if (this.seekNext) {
+      while (!this.seekEndCharacters.includes(TextEditor.getCharAt(stop))) {
+        if (stop.isAtDocumentEnd()) {
+          return failure;
+        }
+        stop = stop.getRightThroughLineBreaks(true);
+      }
+      if (!this.selectAround) {
+        stop = stop.getLeftThroughLineBreaks(true);
+      }
+    }
+
+    vimState.recordedState.operatorPositionDiff = start.subtract(position);
+    vimState.cursorStartPosition = start;
+    return {
+      start: start,
+      stop: stop,
+    };
+  }
+}
+
+@RegisterAction
+export class SeekInnerNextParenthesesOne extends SeekBlock {
+  keys = ['i', 'n', '('];
+  seekBeginCharacters = ['('];
+  seekEndCharacters = [')'];
+}
+
 abstract class SelectArgument extends TextObjectMovement {
   modes = [Mode.Normal, Mode.Visual];
 

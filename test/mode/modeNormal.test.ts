@@ -2742,6 +2742,71 @@ suite('Mode Normal', () => {
   });
 
   newTest({
+    title: 'cin( does nothing when there are no parenthesis after the cursor',
+    start: ['Here is some |glorious test text.'],
+    keysPressed: 'cin(',
+    end: ['Here is some |glorious test text.'],
+    endMode: Mode.Normal,
+  });
+
+  newTest({
+    title: 'cin( changes the contents inside the next parentheses',
+    start: ['Here is some |glorious (test) text.'],
+    keysPressed: 'cin(',
+    end: ['Here is some glorious (|) text.'],
+    endMode: Mode.Insert,
+  });
+
+  newTest({
+    title: 'can( changes the contents around the next parentheses',
+    start: ['Here is some |glorious (test) text.'],
+    keysPressed: 'can(',
+    end: ['Here is some glorious | text.'],
+    endMode: Mode.Insert,
+  });
+
+  newTest({
+    title:
+      'cin( changes the contents inside the next parentheses properly handling nested parentheses',
+    start: ['Here is some |glorious (test(()()) text).'],
+    keysPressed: 'cin(',
+    end: ['Here is some glorious (|).'],
+    endMode: Mode.Insert,
+  });
+
+  newTest({
+    title: 'cin( can strike from multiple lines.',
+    start: [
+      'Here is some |glorious test text.',
+      'Here is a line without anything interesting.',
+      'Here is a line with (parentheses).',
+    ],
+    keysPressed: 'cin(',
+    end: [
+      'Here is some glorious test text.',
+      'Here is a line without anything interesting.',
+      'Here is a line with (|).',
+    ],
+    endMode: Mode.Insert,
+  });
+
+  newTest({
+    title: 'cin( handles quoted text.',
+    start: ['Here is some |glorious (test")" text).'],
+    keysPressed: 'cin(',
+    end: ['Here is some glorious (|).'],
+    endMode: Mode.Insert,
+  });
+
+  newTest({
+    title: 'cin( does nothing with missmatched parentheses.',
+    start: ['Here is some |glorious )test text(.'],
+    keysPressed: 'cin(',
+    end: ['Here is some |glorious )test text(.'],
+    endMode: Mode.Normal,
+  });
+
+  newTest({
     title: '`] go to the end of the previously operated or put text',
     start: ['hello|'],
     keysPressed: 'a world<Esc>`]',
